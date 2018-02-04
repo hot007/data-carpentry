@@ -6,7 +6,7 @@ import iris.plot as iplt
 import iris.coord_categorisation
 iris.FUTURE.netcdf_promote = True
 import cmocean
-
+import provenance
 
 def read_data(fname, month):
     """Read an input data file"""
@@ -66,6 +66,19 @@ def plot_data(cube, month, gridlines=False, levels=None):
     plt.title(title)
 
 
+def write_metadata(outfile, previous_history):
+    """Write the history record to file."""
+           
+    new_history = provenance.get_history_record('/Users/hot007/Documents/Python/data-carpentry')
+    complete_history = '%s \n %s' %(new_history, previous_history)
+                      
+    fname, extension = outfile.split('.')
+    metadata_file = open(fname+'.txt', 'w')
+    metadata_file.write(complete_history) 
+    metadata_file.close()
+    return
+
+
 def main(inargs):
     """Plot the precipitation climatology."""
 
@@ -74,12 +87,13 @@ def main(inargs):
     clim = cube.collapsed('time', iris.analysis.MEAN)
     if inargs.mask:
         sftlf_file, realm = inargs.mask
-        sftlf_cube=iris.load_cube(sftlf_file, 'land_area_fraction') 
+        sftlf_cube=iris.load_cube(sftlf_file, 'land_area_fraction')
+        assert cube.attributes['model_id']==sftlf_cube.attributes['model_id'], "Model IDs differ"
         clim=apply_mask(clim, sftlf_cube, realm)
     plot_data(clim, inargs.month, gridlines=inargs.gridlines,
               levels=inargs.cbar_levels)
     plt.savefig(inargs.outfile)
-
+    write_metadata(inargs.outfile,cube.attributes['history'])
 
 if __name__ == '__main__':
 
